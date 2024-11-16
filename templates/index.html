@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extracción de Texto y Objetos</title>
+</head>
+<body>
+    <h1>Subir Imagen para Procesar</h1>
+    <form action="/upload" method="POST" enctype="multipart/form-data">
+        <input type="file" name="image" accept="image/*" required>
+        <label for="language">Selecciona el idioma de traducción:</label>
+        <select name="language" id="language">
+            <option value="es">Español</option>
+            <option value="en">Inglés</option>
+            <option value="fr">Francés</option>
+            <option value="de">Alemán</option>
+            <!-- Agrega más idiomas según sea necesario -->
+        </select>
+        <input type="submit" value="Subir">
+    </form>
+
+    {% if identified_objects %}
+        <h2>Objetos Identificados</h2>
+        <ul>
+            {% for object in identified_objects %}
+                <li>
+                    <strong>Inglés:</strong> {{ object.original }} <br>
+                    <strong>Traducido:</strong> {{ object.translated }}
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    {% if extracted_text %}
+        <h2>Texto Extraído</h2>
+        <p><strong>Original:</strong> {{ extracted_text }}</p>
+        <p><strong>Traducido:</strong> {{ translated_extracted_text }}</p>
+    {% endif %}
+</body>
+</html>
