@@ -1,9 +1,10 @@
 from flask import Flask, request, render_template, send_from_directory
+from dotenv import load_dotenv
 import os
 import boto3
 from google.cloud import translate_v2 as translate
 import azure.cognitiveservices.speech as speechsdk
-
+load_dotenv()
 app = Flask(__name__)
 
 # Asegúrate de que la carpeta 'static' exista
@@ -17,8 +18,8 @@ translate_client = translate.Client()  # Asegúrate de tener la variable de ento
 textract_client = boto3.client('textract', region_name='us-east-1')  # Cliente para Textract
 
 # Configuración de Azure Cognitive Services (Speech API)
-AZURE_SPEECH_KEY = "F1cNfL9HAr6H2BRY5RHvdMPdBOe3ZPSlhIQLxzrr7g45mFn2ZKiRJQQJ99AKACYeBjFXJ3w3AAAYACOGzdLG"
-AZURE_REGION = "eastus"  # Cambia esto si tu región es diferente
+AZURE_SPEECH_KEY = os.getenv("AZURE_SPEECH_KEY")
+AZURE_REGION = os.getenv("AZURE_REGION") 
 
 # Función para traducir texto
 def translate_text(text, target='es'):
