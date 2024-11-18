@@ -1,7 +1,8 @@
+from flask import Flask, request, render_template, send_from_directory
 import os
 import boto3
-from flask import Flask, request, render_template
 from google.cloud import translate_v2 as translate
+import azure.cognitiveservices.speech as speechsdk
 
 app = Flask(__name__)
 
@@ -15,10 +16,9 @@ s3_client = boto3.client('s3', region_name='us-east-1')
 translate_client = translate.Client()  # Asegúrate de tener la variable de entorno configurada
 textract_client = boto3.client('textract', region_name='us-east-1')  # Cliente para Textract
 
-# Ruta para la página principal
-@app.route('/')
-def index():
-    return render_template('index.html')
+# Configuración de Azure Cognitive Services (Speech API)
+AZURE_SPEECH_KEY = "F1cNfL9HAr6H2BRY5RHvdMPdBOe3ZPSlhIQLxzrr7g45mFn2ZKiRJQQJ99AKACYeBjFXJ3w3AAAYACOGzdLG"
+AZURE_REGION = "eastus"  # Cambia esto si tu región es diferente
 
 # Función para traducir texto
 def translate_text(text, target='es'):
@@ -26,6 +26,33 @@ def translate_text(text, target='es'):
         return ""
     result = translate_client.translate(text, target_language=target)
     return result['translatedText']
+
+# Función para convertir texto a voz y guardarlo en un archivo
+def text_to_speech(text, filename):
+    if not text:
+        return "No text to convert to speech"
+
+    # Crear un objeto de configuración de voz
+    speech_config = speechsdk.SpeechConfig(subscription=AZURE_SPEECH_KEY, region=AZURE_REGION)
+
+    # Configura la salida de audio a un archivo
+    audio_output_path = os.path.join('static', filename)
+    audio_config = speechsdk.audio.AudioOutputConfig(filename=audio_output_path)
+    synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
+
+    # Sintetizar el texto a voz y guardar en el archivo
+    result = synthesizer.speak_text_async(text).get()  # Asegúrate de que el proceso termine antes de continuar
+
+    # Verificar si hubo algún error al sintetizar
+    if result.reason != speechsdk.ResultReason.SynthesizingAudioCompleted:
+        return f"Error al sintetizar el audio: {result.error_details}"
+
+    return audio_output_path  # Devuelve la ruta del archivo de audio
+
+# Ruta para la página principal
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 # Ruta para manejar la carga de la imagen y el procesamiento
 @app.route('/upload', methods=['POST'])
@@ -58,7 +85,7 @@ def upload():
     # Identificar objetos en la imagen usando Rekognition
     try:
         rekognition_response = rekognition_client.detect_labels(
-            Image={'S3Object': {'Bucket': bucket_name, 'Name': image_name}},
+            Image={'S3Object': {'Bucket': bucket_name, 'Name': image_name}} ,
             MaxLabels=10,
             MinConfidence=75
         )
@@ -79,7 +106,6 @@ def upload():
             if item['BlockType'] == 'LINE':
                 extracted_text_lines.append(item['Text'])
         
-        # Agrupar líneas en párrafos (puedes modificar esto según tus necesidades)
         extracted_text = "\n".join(extracted_text_lines)
     except Exception as e:
         return f"Error in Textract: {str(e)}", 500
@@ -102,7 +128,20 @@ def upload():
     except Exception as e:
         return f"Error in translation for extracted text: {str(e)}", 500
 
-    return render_template('index.html', identified_objects=translated_labels, extracted_text=extracted_text, translated_extracted_text=translated_extracted_text)
+    # Guardar el audio de la traducción en un archivo, con un nombre único
+    audio_filename = f"translated_text_audio_{file.filename}.wav"
+    audio_path = text_to_speech(translated_extracted_text, audio_filename)
+
+    return render_template('index.html', 
+                           identified_objects=translated_labels, 
+                           extracted_text=extracted_text, 
+                           translated_extracted_text=translated_extracted_text,
+                           audio_file=audio_filename)
+
+# Ruta para servir el archivo de audio
+@app.route('/audio/<filename>')
+def audio(filename):
+    return send_from_directory('static', filename)
 
 if __name__ == '__main__':
     app.run(debug=True)

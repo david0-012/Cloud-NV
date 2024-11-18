@@ -37,5 +37,13 @@
         <p><strong>Original:</strong> {{ extracted_text }}</p>
         <p><strong>Traducido:</strong> {{ translated_extracted_text }}</p>
     {% endif %}
+
+    {% if audio_file %}
+    <h2>Texto en Audio</h2>
+    <audio controls>
+        <source src="{{ url_for('audio', filename=audio_file) }}" type="audio/wav">
+        Tu navegador no soporta la reproducción de audio.
+    </audio>
+    {% endif %}
 </body>
 </html>
