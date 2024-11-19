@@ -3,47 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Extracción de Texto y Objetos</title>
+    <title>Aplicación de Análisis de Imágenes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #message {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #333;
+        }
+        #video {
+            margin-top: 20px;
+            width: 80%;
+            border: 1px solid #ddd;
+        }
+    </style>
 </head>
 <body>
-    <h1>Subir Imagen para Procesar</h1>
-    <form action="/upload" method="POST" enctype="multipart/form-data">
-        <input type="file" name="image" accept="image/*" required>
-        <label for="language">Selecciona el idioma de traducción:</label>
-        <select name="language" id="language">
-            <option value="es">Español</option>
-            <option value="en">Inglés</option>
-            <option value="fr">Francés</option>
-            <option value="de">Alemán</option>
-            <!-- Agrega más idiomas según sea necesario -->
-        </select>
-        <input type="submit" value="Subir">
-    </form>
+    <h1>Aplicación de Análisis de Imágenes</h1>
+    <button id="startBtn">Iniciar Proceso</button>
+    <p id="message"></p>
 
-    {% if identified_objects %}
-        <h2>Objetos Identificados</h2>
-        <ul>
-            {% for object in identified_objects %}
-                <li>
-                    <strong>Inglés:</strong> {{ object.original }} <br>
-                    <strong>Traducido:</strong> {{ object.translated }}
-                </li>
-            {% endfor %}
-        </ul>
-    {% endif %}
+    <!-- Componente de video en tiempo real -->
+    <img id="video" src="/video_feed" alt="Video en vivo">
 
-    {% if extracted_text %}
-        <h2>Texto Extraído</h2>
-        <p><strong>Original:</strong> {{ extracted_text }}</p>
-        <p><strong>Traducido:</strong> {{ translated_extracted_text }}</p>
-    {% endif %}
-
-    {% if audio_file %}
-    <h2>Texto en Audio</h2>
-    <audio controls>
-        <source src="{{ url_for('audio', filename=audio_file) }}" type="audio/wav">
-        Tu navegador no soporta la reproducción de audio.
-    </audio>
-    {% endif %}
+    <script>
+        document.getElementById('startBtn').addEventListener('click', function() {
+            document.getElementById('message').innerText = "Iniciando análisis, espere 3 segundos...";
+            fetch('/start_process')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('message').innerText = data.message;
+                })
+                .catch(error => {
+                    document.getElementById('message').innerText = "Hubo un error al iniciar el proceso.";
+                });
+        });
+    </script>
 </body>
 </html>
