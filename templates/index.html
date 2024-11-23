@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,6 +11,7 @@
             text-align: center;
             margin-top: 50px;
         }
+
         button {
             padding: 10px 20px;
             font-size: 16px;
@@ -19,31 +21,47 @@
             border: none;
             border-radius: 5px;
         }
+
         button:hover {
             background-color: #45a049;
         }
+
         #message {
             margin-top: 20px;
             font-size: 18px;
             color: #333;
         }
+
         #video {
             margin-top: 20px;
-            width: 80%;
+            max-width: 50%;
+            /* Limita el ancho máximo de la imagen al 80% de la pantalla */
+            width: auto;
+            /* Ajusta el tamaño automáticamente */
+            height: auto;
+            /* Mantiene la relación de aspecto original */
             border: 1px solid #ddd;
+            display: block;
+            /* Asegura que la imagen sea un bloque */
+            margin-left: auto;
+            /* Centra la imagen horizontalmente */
+            margin-right: auto;
+            /* Centra la imagen horizontalmente */
         }
     </style>
 </head>
+
 <body>
     <h1>Aplicación de Análisis de Imágenes</h1>
     <button id="startBtn">Iniciar Proceso</button>
+    <button id="stopBtn">Detener Proceso</button>
     <p id="message"></p>
 
     <!-- Componente de video en tiempo real -->
     <img id="video" src="/video_feed" alt="Video en vivo">
 
     <script>
-        document.getElementById('startBtn').addEventListener('click', function() {
+        document.getElementById('startBtn').addEventListener('click', function () {
             document.getElementById('message').innerText = "Iniciando análisis, espere 3 segundos...";
             fetch('/start_process')
                 .then(response => response.json())
@@ -54,6 +72,19 @@
                     document.getElementById('message').innerText = "Hubo un error al iniciar el proceso.";
                 });
         });
+
+        document.getElementById('stopBtn').addEventListener('click', function () {
+            document.getElementById('message').innerText = "Deteniendo proceso...";
+            fetch('/stop_process')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('message').innerText = data.message;
+                })
+                .catch(error => {
+                    document.getElementById('message').innerText = "Hubo un error al detener el proceso.";
+                });
+        });
     </script>
 </body>
+
 </html>

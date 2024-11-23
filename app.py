@@ -23,7 +23,10 @@ object_translation = {
     "Glasses": "Gafas"
 }
 
-# Función para traducir texto al español (puedes añadir un servicio de traducción real si lo deseas)
+# Variable de control para detener el proceso
+process_running = False
+
+# Función para traducir texto al español
 def translate_to_spanish(text):
     return text  # Aquí puedes agregar la traducción si es necesario.
 
@@ -82,26 +85,50 @@ def play_audio(text):
     tts.save("output.mp3")
     os.system("start output.mp3")  # En Windows para reproducir
 
+# Función que ejecuta el proceso de análisis y reproducción de audio en segundo plano
+def process_images():
+    global process_running
+    start_time = time.time()
+    last_audio_time = time.time()  # Variable para controlar cuándo reproducir el audio
+
+    while process_running:
+        ret, frame = cap.read()
+        if ret:
+            text, detected_objects = analyze_image(frame)
+            # Concatenar todo el texto en español, incluyendo el texto detectado y los objetos
+            audio_text = f"{translate_to_spanish(text)}. Objetos detectados: {', '.join(detected_objects)}"
+            
+            # Reproducir el audio cada 3 segundos
+            if time.time() - last_audio_time >= 3:
+                play_audio(audio_text)
+                last_audio_time = time.time()  # Actualizar el tiempo de la última reproducción
+        
+        time.sleep(1)  # Agregar un pequeño retraso para no sobrecargar la CPU
+
 # Ruta principal para la interfaz web
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# Ruta para ejecutar el procesamiento de cámara
+# Ruta para ejecutar el procesamiento de cámara (iniciar el proceso)
 @app.route('/start_process', methods=['GET'])
 def start_process():
-    start_time = time.time()
-    while time.time() - start_time < 3:
-        ret, frame = cap.read()
-        if ret:
-            text, detected_objects = analyze_image(frame)
-            # Concatenar todo el texto en español, incluyendo el texto detectado y los objetos
-            # Asegurarnos de que todos los componentes estén en español
-            audio_text = f"{translate_to_spanish(text)}. Objetos detectados: {', '.join(detected_objects)}"
-            play_audio(audio_text)
-        time.sleep(1)
-    
-    return jsonify({"message": "Proceso iniciado, espere 3 segundos para escuchar los resultados."})
+    global process_running
+
+    if not process_running:
+        process_running = True
+        # Ejecutar el proceso de imágenes en un hilo en segundo plano
+        threading.Thread(target=process_images, daemon=True).start()
+        return jsonify({"message": "Proceso iniciado, espere para escuchar los resultados."})
+    else:
+        return jsonify({"message": "El proceso ya está en ejecución."})
+
+# Ruta para detener el proceso
+@app.route('/stop_process', methods=['GET'])
+def stop_process():
+    global process_running
+    process_running = False
+    return jsonify({"message": "Proceso detenido."})
 
 if __name__ == '__main__':
     app.run(debug=True)
