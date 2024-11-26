@@ -5,6 +5,7 @@ import time
 import threading
 from google.cloud import vision
 from google.cloud.vision_v1 import types
+from googletrans import Translator
 from gtts import gTTS
 
 app = Flask(__name__)
@@ -12,23 +13,20 @@ app = Flask(__name__)
 # Configuración de la cámara
 cap = cv2.VideoCapture(0)
 
-# Diccionario de traducción de objetos al español
-object_translation = {
-    "Person": "Persona",
-    "Cat": "Gato",
-    "Dog": "Perro",
-    "Car": "Coche",
-    "Bicycle": "Bicicleta",
-    "Jacket": "Chaqueta",
-    "Glasses": "Gafas"
-}
-
 # Variable de control para detener el proceso
 process_running = False
 
+# Inicializar el cliente de traducción
+translator = Translator()
+
 # Función para traducir texto al español
 def translate_to_spanish(text):
-    return text  # Aquí puedes agregar la traducción si es necesario.
+    try:
+        translation = translator.translate(text, src='en', dest='es')
+        return translation.text
+    except Exception as e:
+        print(f"Error en la traducción: {e}")
+        return text  # Devuelve el texto original si ocurre un error
 
 # Función para capturar el frame y enviarlo como un JPEG
 def generate_frames():
@@ -64,20 +62,16 @@ def analyze_image(frame):
     # Análisis de texto (OCR)
     response = client.text_detection(image=image)
     texts = response.text_annotations
+    detected_text = texts[0].description if texts else ""
 
     # Análisis de objetos
     response_objects = client.object_localization(image=image)
     objects = response_objects.localized_object_annotations
 
-    text = texts[0].description if texts else ""
-    
-    # Traducir los objetos al español usando el diccionario
-    detected_objects = [object_translation.get(obj.name, obj.name) for obj in objects]
+    # Detectar nombres de objetos
+    detected_objects = [obj.name for obj in objects]
 
-    # Traducir el texto detectado al español
-    translated_text = translate_to_spanish(text)
-
-    return translated_text, detected_objects
+    return detected_text, detected_objects
 
 # Función para reproducir audio desde el texto
 def play_audio(text):
@@ -88,15 +82,19 @@ def play_audio(text):
 # Función que ejecuta el proceso de análisis y reproducción de audio en segundo plano
 def process_images():
     global process_running
-    start_time = time.time()
     last_audio_time = time.time()  # Variable para controlar cuándo reproducir el audio
 
     while process_running:
         ret, frame = cap.read()
         if ret:
-            text, detected_objects = analyze_image(frame)
-            # Concatenar todo el texto en español, incluyendo el texto detectado y los objetos
-            audio_text = f"{translate_to_spanish(text)}. Objetos detectados: {', '.join(detected_objects)}"
+            detected_text, detected_objects = analyze_image(frame)
+
+            # Traducir el texto y los objetos detectados
+            translated_text = translate_to_spanish(detected_text)
+            translated_objects = [translate_to_spanish(obj) for obj in detected_objects]
+
+            # Crear el texto para el audio
+            audio_text = f"{translated_text}. Objetos detectados: {', '.join(translated_objects)}"
             
             # Reproducir el audio cada 3 segundos
             if time.time() - last_audio_time >= 3:
